@@ -1,0 +1,7 @@
+debate:
+  rounds: 3
+  agents: ["A", "B", "C"]
+  topic: "Should we use AI to write code?"
+
+gpt:
+  model_name: "gpt-4o"

@@ -1,0 +1,15 @@
+pyproject.toml
+setup.py
+src/agents/__init__.py
+src/agents/agent_a.py
+src/agents/agent_b.py
+src/agents/agent_c.py
+src/agents/base_agent.py
+src/dialogue/__init__.py
+src/dialogue/dialogue_manager.py
+src/socialdebateai.egg-info/PKG-INFO
+src/socialdebateai.egg-info/SOURCES.txt
+src/socialdebateai.egg-info/dependency_links.txt
+src/socialdebateai.egg-info/top_level.txt
+src/utils/__init__.py
+src/utils/config_loader.py
