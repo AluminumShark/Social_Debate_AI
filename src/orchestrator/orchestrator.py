@@ -3,10 +3,38 @@ Enhanced Debate Orchestrator
 Supports diverse retrieval strategies, topic analysis, and argument pattern recognition
 """
 
-from gpt_interface.gpt_client import chat
-from src.rag.retriever import create_enhanced_retriever
+try:
+    from ..gpt_interface.gpt_client import chat
+except ImportError:
+    from gpt_interface.gpt_client import chat
+
+try:
+    from ..rag.retriever import create_enhanced_retriever
+except ImportError:
+    from rag.retriever import create_enhanced_retriever
+
 from typing import List, Dict, Optional
 import re
+
+try:
+    from ..gnn.social_encoder import social_vec
+except ImportError:
+    try:
+        from gnn.social_encoder import social_vec
+    except ImportError:
+        def social_vec(author):
+            """Placeholder function for social vector"""
+            return [0.0] * 128
+
+#try:
+#    from ..rl.policy_network import select_strategy
+#except ImportError:
+#    try:
+#        from rl.policy_network import select_strategy
+#    except ImportError:
+def select_strategy(query):
+    """Placeholder function for strategy selection"""
+    return 'balanced'
 
 class EnhancedOrchestrator:
     """Enhanced Debate Orchestrator"""
@@ -188,12 +216,19 @@ Write your next response (≤180 words):
         intent = self.analyze_query_intent(query)
         print(f"🎯 Intent identified: {intent['debate_style']}, topics: {intent['topics']}")
         
-        # Adaptive evidence gathering
+        # 1. 取適應證據
         evidence = self.gather_evidence_adaptive(query, strategy)
-        
-        # Build enhanced prompt
-        prompt = self.build_enhanced_prompt(topic, history, agent, evidence, intent)
-        
+
+        # 2. 取得社交向量 & 策略
+        author = agent # 這裡假設 agent 名 = 作者名；若不同請傳入
+        social_feature = social_vec(author)
+        dyn_strategy = select_strategy(query)
+
+        # 3. Build prompt
+        prompt = self.build_enhanced_prompt(
+            topic, history, agent, evidence, intent,
+            ) + f'\n\nSocial embedding: {social_feature}\nSuggested strategy: {dyn_strategy}'
+
         # Generate response
         try:
             response = chat(prompt)
@@ -262,6 +297,8 @@ Write your next response (≤180 words):
         except Exception as e:
             print(f"⚠️ Error getting topic suggestions: {e}")
             return []
+    
+
 
 # Convenience function
 def create_enhanced_orchestrator():

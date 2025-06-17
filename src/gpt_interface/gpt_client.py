@@ -1,5 +1,8 @@
 import openai, os
-from utils.config_loader import Config
+try:
+    from ..utils.config_loader import Config
+except ImportError:
+    from utils.config_loader import Config
 
 
 cfg = Config.load()
