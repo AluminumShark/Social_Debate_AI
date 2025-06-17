@@ -4,7 +4,7 @@ Supports diverse retrieval strategies, topic analysis, and argument pattern reco
 """
 
 from gpt_interface.gpt_client import chat
-from src.rag.enhanced_retriever import create_enhanced_retriever
+from src.rag.retriever import create_enhanced_retriever
 from typing import List, Dict, Optional
 import re
 
