@@ -26,15 +26,21 @@ except ImportError:
             """Placeholder function for social vector"""
             return [0.0] * 128
 
-#try:
-#    from ..rl.policy_network import select_strategy
-#except ImportError:
-#    try:
-#        from rl.policy_network import select_strategy
-#    except ImportError:
-def select_strategy(query):
-    """Placeholder function for strategy selection"""
-    return 'balanced'
+try:
+    from ..rl.policy_network import select_strategy, choose_snippet
+except ImportError:
+    try:
+        from rl.policy_network import select_strategy, choose_snippet
+    except ImportError:
+        def select_strategy(query):
+            """Placeholder function for strategy selection"""
+            return 'balanced'
+        
+        def choose_snippet(state_text, pool):
+            """Placeholder function for snippet selection"""
+            if not pool:
+                return "No evidence available."
+            return max(pool, key=lambda x: x.get('similarity_score', 0.0))['content']
 
 class EnhancedOrchestrator:
     """Enhanced Debate Orchestrator"""
@@ -237,6 +243,92 @@ Write your next response (≤180 words):
         except Exception as e:
             print(f"❌ Error generating response: {e}")
             return f"I apologize, but I encountered a technical issue while analyzing this complex topic. Let me reorganize my thoughts..."
+    
+    def get_rl_enhanced_reply(self, topic: str, history: List[str], agent: str,
+                            social_context: List[float] = None) -> str:
+        """使用 RL 策略增強的回覆生成"""
+        try:
+            print(f"🤖 Agent {agent} 開始 RL 增強分析...")
+            
+            # 構建狀態文本
+            recent_turns = history[-3:] if history else []
+            recent = '\n'.join(recent_turns) if recent_turns else "(Debate beginning)"
+            state_text = f"Topic: {topic}\nRecent turns: {recent}"
+            
+            # 使用 RL 選擇策略
+            selected_strategy = select_strategy(state_text, recent, social_context)
+            print(f"🎯 RL 選擇策略: {selected_strategy}")
+            
+            # 根據策略調整檢索參數
+            strategy_config = self._get_strategy_config(selected_strategy)
+            
+            # 檢索證據池
+            pool = self.retriever.retrieve(
+                query=state_text,
+                k=strategy_config['k'],
+                index_type=strategy_config.get('index_type', 'high_quality'),
+                persuasion_only=strategy_config.get('persuasion_only', False)
+            )
+            
+            # 使用 RL 選擇最佳片段
+            chosen = choose_snippet(state_text, pool)
+            print(f"📝 RL 選擇證據片段: {chosen[:100]}...")
+            
+            # 獲取社會背景信息
+            social_info = ""
+            if social_context:
+                social_info = f"Social context: {social_context[:5]}..."  # 顯示前5個維度
+            
+            # 構建增強提示
+            prompt = f"""
+Topic: {topic}
+Recent turns:
+{recent}
+
+Social: {social_info}
+Evidence Snippet: "{chosen}"
+
+Strategy: {selected_strategy}
+
+Write ≤120 words persuading the opponent using {selected_strategy} approach. Cite as [CITE].
+"""
+            
+            # 生成回覆
+            reply = chat(prompt)
+            
+            print(f"🎭 Agent {agent} 使用 {selected_strategy} 策略生成回覆 ({len(reply.split())} words)")
+            return reply
+            
+        except Exception as e:
+            print(f"❌ RL 增強回覆生成失敗: {e}")
+            # 回退到普通方法
+            return self.get_reply(topic, history, agent, 'balanced')
+    
+    def _get_strategy_config(self, strategy: str) -> Dict:
+        """獲取策略配置"""
+        configs = {
+            'aggressive': {
+                'k': 3,
+                'index_type': 'high_quality',
+                'persuasion_only': True
+            },
+            'defensive': {
+                'k': 5,
+                'index_type': 'comprehensive',
+                'persuasion_only': False
+            },
+            'analytical': {
+                'k': 4,
+                'index_type': 'high_quality',
+                'persuasion_only': False
+            },
+            'empathetic': {
+                'k': 3,
+                'index_type': 'comprehensive',
+                'persuasion_only': True
+            }
+        }
+        return configs.get(strategy, configs['analytical'])
     
     def analyze_debate_flow(self, topic: str, history: List[str]) -> Dict:
         """Analyze debate flow and suggestions"""
