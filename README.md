@@ -92,6 +92,33 @@ graph LR
     F --> B
 ```
 
+## 📊 數據集
+
+本專案使用以下數據集進行訓練：
+
+### Reddit ChangeMyView Dataset
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3778297.svg)](https://doi.org/10.5281/zenodo.3778297)
+
+本專案的 RAG 檢索系統使用了 Reddit ChangeMyView 數據集，該數據集包含了豐富的辯論和說服性對話內容。
+
+**引用方式**：
+```bibtex
+@dataset{reddit_changemyview,
+  author       = {Reddit ChangeMyView Community},
+  title        = {Reddit ChangeMyView Dataset},
+  year         = {2020},
+  publisher    = {Zenodo},
+  doi          = {10.5281/zenodo.3778297},
+  url          = {https://doi.org/10.5281/zenodo.3778297}
+}
+```
+
+該數據集提供了：
+- 37,898 個高質量的辯論文檔
+- 多樣化的辯論主題和觀點
+- 真實的說服策略和論證模式
+- 豐富的元數據標註
+
 ## 🤝 貢獻指南
 
 歡迎提交 Issue 和 Pull Request！
