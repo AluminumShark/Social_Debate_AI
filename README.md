@@ -118,7 +118,6 @@ python train_models.py
 ## 📚 文檔
 
 - [快速開始指南](docs/QUICKSTART.md)
-- [專案結構說明](docs/PROJECT_STRUCTURE.md)
 - [技術實現細節](docs/TECHNICAL_DETAILS.md)
 - [訓練指南](docs/TRAINING_GUIDE.md)
 - [RL使用指南](docs/RL_USAGE.md)
