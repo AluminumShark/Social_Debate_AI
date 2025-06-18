@@ -229,6 +229,13 @@ def create_enhanced_retriever() -> EnhancedRetriever:
     try:
         return EnhancedRetriever()
     except Exception as e:
+<<<<<<< Updated upstream
         print(f"❌ Failed to create retriever: {e}")
         print("💡 Please run enhanced_build_index.py first to build indexes")
         raise 
+=======
+        print(f"❌ 無法載入 Chroma 檢索器: {e}")
+        print("💡 使用簡化版檢索器")
+        from .simple_retriever import SimpleRetriever
+        return SimpleRetriever()
+>>>>>>> Stashed changes

@@ -14,7 +14,7 @@ def chat(prompt: str, model=None) -> str:
         response = openai.chat.completions.create(
             model=model,
             messages=[{'role': 'user', 'content': prompt}],
-            max_tokens=256
+            max_tokens=800  # 增加到 800 以確保能生成 250 字的中文回應
         )
         return response.choices[0].message.content
     except Exception as e:

@@ -1,8 +1,8 @@
 from .base_agent import BaseAgent
-try:
-    from ..orchestrator.orchestrator import EnhancedOrchestrator as Orchestrator
-except ImportError:
-    from orchestrator.orchestrator import EnhancedOrchestrator as Orchestrator
+from typing import List, Dict, Optional
+from dataclasses import dataclass
+from orchestrator.parallel_orchestrator import ParallelOrchestrator as Orchestrator
+from gpt_interface.gpt_client import chat
 
 class AgentC(BaseAgent):
     def __init__(self, name: str, config: dict):
