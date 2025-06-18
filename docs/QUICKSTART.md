@@ -186,8 +186,8 @@ app.run(host='0.0.0.0', port=5001)  # 改為其他端口
    - 查看 [TECHNICAL_DETAILS.md](TECHNICAL_DETAILS.md) 了解技術原理
 
 2. **訓練自己的模型**
-   - 參考 [TRAINING_GUIDE.md](TRAINING_GUIDE.md) 訓練模型
-   - 使用 [RL_USAGE.md](RL_USAGE.md) 自定義策略
+   - 參考 [RL_TRAINING_GUIDE.md](RL_TRAINING_GUIDE.md) 訓練 RL 模型
+   - 查看 [TECHNICAL_DETAILS.md](TECHNICAL_DETAILS.md) 了解其他模組訓練
 
 3. **參與開發**
    - Fork 專案並提交 Pull Request

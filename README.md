@@ -117,10 +117,13 @@ python train_models.py
 
 ## 📚 文檔
 
-- [快速開始指南](docs/QUICKSTART.md)
-- [技術實現細節](docs/TECHNICAL_DETAILS.md)
-- [訓練指南](docs/TRAINING_GUIDE.md)
-- [RL使用指南](docs/RL_USAGE.md)
+- [文檔索引](docs/INDEX.md) - 所有文檔導覽
+- [快速開始指南](docs/QUICKSTART.md) - 5分鐘上手
+- [專案結構說明](docs/PROJECT_STRUCTURE.md) - 代碼組織
+- [技術實現細節](docs/TECHNICAL_DETAILS.md) - 深入原理
+- [RL訓練指南](docs/RL_TRAINING_GUIDE.md) - 模型訓練
+- [API參考文檔](docs/API_REFERENCE.md) - 接口說明
+- [部署指南](docs/DEPLOYMENT.md) - 生產部署
 
 ## 🛠️ 技術架構
 
