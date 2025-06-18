@@ -1,0 +1,110 @@
+# GNN (Graph Neural Network) 配置
+
+# 模型架構
+model:
+  # Deep Graph Infomax (DGI) 參數
+  architecture: "DGI"
+  
+  # 維度設定
+  input_dim: 768        # BERT/DistilBERT 輸出維度
+  hidden_dim: 256       # 隱藏層維度
+  output_dim: 128       # 社會向量維度
+  
+  # 網路層數
+  num_layers: 2
+  
+  # 正則化
+  dropout: 0.1
+  
+  # 激活函數
+  activation: "relu"
+  
+  # 圖卷積類型
+  conv_type: "GCN"  # GCN, GAT, GraphSAGE
+
+# 訓練設定
+training:
+  # 基本參數
+  epochs: 200
+  learning_rate: 0.001
+  batch_size: 32
+  
+  # 優化器
+  optimizer: "adam"
+  weight_decay: 0.0001
+  
+  # 學習率調度
+  scheduler:
+    type: "step"
+    step_size: 50
+    gamma: 0.5
+  
+  # 早停
+  early_stopping:
+    patience: 20
+    min_delta: 0.001
+    
+  # 負樣本策略
+  negative_sampling:
+    strategy: "corruption"  # 節點特徵打亂
+    num_negatives: 1
+
+# 圖構建設定
+graph_construction:
+  # 節點設定
+  nodes:
+    - id: "Agent_A"
+      features: "stance_based"
+    - id: "Agent_B"
+      features: "stance_based"
+    - id: "Agent_C"
+      features: "stance_based"
+  
+  # 邊設定
+  edges:
+    # 初始連接（全連接）
+    initial_connections: "full"
+    
+    # 邊權重計算
+    weight_function: "interaction_strength"
+    
+    # 動態更新
+    dynamic_update: true
+    update_frequency: "per_round"
+
+# 社會影響力計算
+social_influence:
+  # 影響力維度
+  direct_influence_dims: 10
+  indirect_influence_dims: 40
+  
+  # 權重分配
+  weights:
+    direct: 0.7
+    indirect: 0.3
+  
+  # 衰減因子
+  decay_factor: 0.9
+
+# 模型保存設定
+checkpointing:
+  save_dir: "data/models/gnn"
+  save_frequency: 10  # 每 N 個 epoch 保存一次
+  keep_last_n: 3      # 保留最近 N 個檢查點
+
+# 評估設定
+evaluation:
+  # 評估指標
+  metrics:
+    - "reconstruction_loss"
+    - "mutual_information"
+    - "embedding_quality"
+  
+  # 視覺化
+  visualization:
+    enabled: true
+    save_embeddings: true
+    plot_frequency: 20
+
+# 隨機種子（確保可重複性）
+seed: 517466

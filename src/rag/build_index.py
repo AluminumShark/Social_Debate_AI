@@ -119,10 +119,11 @@ def extract_enhanced_metadata(submission, comment=None):
 
 class EnhancedEmbeddings(OpenAIEmbeddings):
     """Enhanced embedding class with cost calculation and progress bar"""
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, batch_size=500, **kwargs):
         super().__init__(*args, **kwargs)
         self._total_tokens = 0
         self._total_cost = 0.0
+        self._batch_size = batch_size
     
     @property
     def total_tokens(self): return self._total_tokens
@@ -134,7 +135,7 @@ class EnhancedEmbeddings(OpenAIEmbeddings):
         total_tokens = sum(len(tokenizer.encode(text)) for text in texts)
         print(f"📊 Estimated tokens: {total_tokens:,}, cost: ${(total_tokens/1_000_000)*COST_PER_1M_TOKENS:.4f}")
         
-        batch_size = 100
+        batch_size = self._batch_size
         embeddings = []
         
         for i in tqdm(range(0, len(texts), batch_size), desc="🔮 Embedding"):
@@ -287,6 +288,215 @@ def build_all_indexes():
             print(f"  ✅ {name}: {config['description']}")
             print(f"     Path: {config['path']}")
             print(f"     Collection: {config['collection']}")
+
+def build_chroma_index(data_path: str, output_dir: str, max_docs: int = None, batch_size: int = 500):
+    """構建 Chroma 向量索引"""
+    data_path = Path(data_path)
+    output_dir = Path(output_dir)
+    
+    if not data_path.exists():
+        raise FileNotFoundError(f"數據檔案不存在: {data_path}")
+    
+    # 創建輸出目錄
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    # 文本分割器
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=CHUNK_SIZE,
+        chunk_overlap=CHUNK_OVERLAP,
+        separators=["\n\n", "\n", ".", " "]
+    )
+    
+    docs = []
+    doc_count = 0
+    
+    with data_path.open(encoding="utf-8") as f:
+        for line in tqdm(f, desc="處理文檔"):
+            if max_docs and doc_count >= max_docs:
+                break
+                
+            try:
+                data = json.loads(line)
+                
+                # 處理提交
+                if "submission" in data:
+                    submission = data["submission"]
+                    meta = extract_enhanced_metadata(submission)
+                    body = submission.get("selftext") or submission.get("title", "")
+                    
+                    if body and len(body) > 50:
+                        for chunk in splitter.split_text(body):
+                            docs.append(Document(page_content=chunk, metadata=meta))
+                
+                # 處理所有評論（包括 delta 和 nodelta）
+                if "delta_comment" in data:
+                    delta_data = data["delta_comment"]
+                    if delta_data and "comments" in delta_data:
+                        for comment in delta_data["comments"]:
+                            if comment.get("body") and len(comment["body"]) > 50:
+                                meta = extract_enhanced_metadata(data["submission"], comment)
+                                for chunk in splitter.split_text(comment["body"]):
+                                    docs.append(Document(page_content=chunk, metadata=meta))
+                
+                if "nodelta_comment" in data:
+                    nodelta_data = data["nodelta_comment"]
+                    if nodelta_data and "comments" in nodelta_data:
+                        for comment in nodelta_data["comments"]:
+                            if comment.get("body") and len(comment["body"]) > 50:
+                                # 標記為非成功說服
+                                meta = extract_enhanced_metadata(data["submission"], comment)
+                                meta['persuasion_success'] = False
+                                meta['type'] = 'nodelta_comment'
+                                for chunk in splitter.split_text(comment["body"]):
+                                    docs.append(Document(page_content=chunk, metadata=meta))
+                
+                doc_count += 1
+                
+            except Exception as e:
+                print(f"處理文檔時出錯: {e}")
+                continue
+    
+    print(f"收集了 {len(docs)} 個文檔片段")
+    
+    # 構建向量索引，使用傳入的批次大小
+    embeddings = EnhancedEmbeddings(model=EMB_MODEL, batch_size=batch_size)
+    vectorstore = Chroma.from_documents(
+        documents=docs,
+        embedding=embeddings,
+        persist_directory=str(output_dir),
+        collection_name="social_debate_collection"
+    )
+    vectorstore.persist()
+    
+    return {
+        "total_docs": len(docs),
+        "embedding_cost": embeddings.total_cost,
+        "output_dir": str(output_dir)
+    }
+
+def build_simple_index(data_path: str, output_path: str, max_docs: int = None):
+    """構建簡單的 JSON 索引"""
+    data_path = Path(data_path)
+    output_path = Path(output_path)
+    
+    # 創建輸出目錄
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    documents = []
+    doc_count = 0
+    
+    if data_path.exists():
+        with data_path.open(encoding="utf-8") as f:
+            for line in tqdm(f, desc="處理文檔"):
+                if max_docs and doc_count >= max_docs:
+                    break
+                    
+                try:
+                    data = json.loads(line)
+                    
+                    # 處理提交
+                    if "submission" in data:
+                        submission = data["submission"]
+                        body = submission.get("selftext") or submission.get("title", "")
+                        
+                        if body and len(body) > 50:
+                            topics = classify_topics(body)
+                            doc = {
+                                "id": f"doc_{doc_count:05d}",  # 改為5位數以支援更多文檔
+                                "content": body[:500],  # 限制長度
+                                "metadata": {
+                                    "type": "submission",
+                                    "topic": topics[0] if topics else "general",
+                                    "stance": "neutral",
+                                    "quality_score": min(submission.get("score", 0) / 100, 1.0)
+                                }
+                            }
+                            documents.append(doc)
+                            doc_count += 1
+                    
+                    # 處理 delta 評論
+                    if "delta_comment" in data and data["delta_comment"]:
+                        delta_comment = data["delta_comment"]
+                        # 處理評論列表中的所有評論
+                        if "comments" in delta_comment and delta_comment["comments"]:
+                            for comment in delta_comment["comments"]:
+                                if comment.get("body") and len(comment["body"]) > 50:
+                                    topics = classify_topics(comment["body"])
+                                    doc = {
+                                        "id": f"doc_{doc_count:05d}",
+                                        "content": comment["body"][:500],
+                                        "metadata": {
+                                            "type": "delta_comment",
+                                            "topic": topics[0] if topics else "general",
+                                            "stance": "persuasive",
+                                            "quality_score": min(comment.get("score", 0) / 100, 1.0),
+                                            "persuasion_success": True
+                                        }
+                                    }
+                                    documents.append(doc)
+                                    doc_count += 1
+                                    
+                                    if max_docs and doc_count >= max_docs:
+                                        break
+                    
+                    # 處理 nodelta 評論
+                    if "nodelta_comment" in data and data["nodelta_comment"]:
+                        nodelta_comment = data["nodelta_comment"]
+                        if "comments" in nodelta_comment and nodelta_comment["comments"]:
+                            for comment in nodelta_comment["comments"]:
+                                if comment.get("body") and len(comment["body"]) > 50:
+                                    topics = classify_topics(comment["body"])
+                                    doc = {
+                                        "id": f"doc_{doc_count:05d}",
+                                        "content": comment["body"][:500],
+                                        "metadata": {
+                                            "type": "nodelta_comment",
+                                            "topic": topics[0] if topics else "general",
+                                            "stance": "argumentative",
+                                            "quality_score": min(comment.get("score", 0) / 100, 1.0),
+                                            "persuasion_success": False
+                                        }
+                                    }
+                                    documents.append(doc)
+                                    doc_count += 1
+                                    
+                                    if max_docs and doc_count >= max_docs:
+                                        break
+                    
+                except Exception as e:
+                    continue
+    
+    # 如果沒有數據，使用預設文檔
+    if not documents:
+        documents = [
+            {
+                "id": "doc_001",
+                "content": "人工智慧的監管是一個複雜的議題。支持者認為，適當的監管可以防止 AI 被濫用。",
+                "metadata": {
+                    "type": "expert_opinion",
+                    "topic": "AI監管",
+                    "stance": "支持",
+                    "quality_score": 0.85
+                }
+            }
+        ]
+    
+    # 保存索引
+    index_data = {
+        "documents": documents,
+        "metadata": {
+            "version": "1.0",
+            "created_at": time.strftime("%Y-%m-%d"),
+            "total_documents": len(documents)
+        }
+    }
+    
+    with open(output_path, 'w', encoding='utf-8') as f:
+        json.dump(index_data, f, ensure_ascii=False, indent=2)
+    
+    print(f"✅ 簡單索引構建完成，共 {len(documents)} 個文檔")
+    
+    return documents
 
 if __name__ == "__main__":
     build_all_indexes() 

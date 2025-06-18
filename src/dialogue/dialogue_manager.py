@@ -1,13 +1,7 @@
-try:
-    from ..agents.agent_a import AgentA
-    from ..agents.agent_b import AgentB
-    from ..agents.agent_c import AgentC
-    from ..utils.config_loader import Config
-except ImportError:
-    from agents.agent_a import AgentA
-    from agents.agent_b import AgentB
-    from agents.agent_c import AgentC
-    from utils.config_loader import Config
+from agents.agent_a import AgentA
+from agents.agent_b import AgentB
+from agents.agent_c import AgentC
+from utils.config_loader import Config
 import textwrap
 
 class DialogueManager:

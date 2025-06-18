@@ -1,57 +1,76 @@
 """
-平行處理辯論協調器
-支援 RL + GNN + RAG 平行運行，動態說服/反駁機制
+平行辯論協調器
+整合 RL、GNN、RAG 三個模組的平行處理
 """
 
 import asyncio
-import concurrent.futures
-from typing import List, Dict, Optional, Tuple
-from dataclasses import dataclass
-import json
+from concurrent.futures import ThreadPoolExecutor
 import time
+from dataclasses import dataclass
+from typing import Dict, List, Any, Optional
 from pathlib import Path
+import sys
+import random
+import numpy as np
 
+# 延遲導入，避免循環依賴
+# PolicyNetwork 和 Retriever 將在需要時動態導入
+
+# 導入 GPT 接口
 try:
-    from ..rl.policy_network import select_strategy, choose_snippet, PolicyNetwork
-    from ..gnn.social_encoder import social_vec
-<<<<<<< Updated upstream
-    from ..rag.retriever import create_enhanced_retriever
-    from ..gpt_interface.gpt_client import chat
-except ImportError:
-    # 回退導入
-    import sys
-    sys.path.append(str(Path(__file__).parent.parent))
-    from rl.policy_network import select_strategy, choose_snippet, PolicyNetwork
-    from gnn.social_encoder import social_vec
-    from rag.retriever import create_enhanced_retriever
     from gpt_interface.gpt_client import chat
-=======
-    from ..rag.retriever import create_retriever
-    from ..utils.config_loader import ConfigLoader
-    from ..gpt_interface.gpt_client import chat
 except ImportError:
-    # 備用導入路徑
-    try:
-        from rl.policy_network import select_strategy, choose_snippet, PolicyNetwork
-        from gnn.social_encoder import social_vec
-        from rag.retriever import create_retriever
-        from utils.config_loader import ConfigLoader
-        from gpt_interface.gpt_client import chat
-    except ImportError as e:
-        print(f"⚠️ 導入錯誤: {e}")
-        # 定義虛擬函數以避免錯誤
-        PolicyNetwork = None
-        social_vec = lambda x: [0.1] * 128
-        create_retriever = None
-        ConfigLoader = None
-        # 定義虛擬 chat 函數
-        def chat(prompt: str) -> str:
-            """虛擬 chat 函數，當 GPT 不可用時使用"""
-            strategies = ['analytical', 'aggressive', 'defensive', 'empathetic']
-            import random
-            strategy = random.choice(strategies)
-            return f"[模擬回應 - {strategy}策略] 基於'{prompt[:50]}...'的分析，我認為這個議題需要更深入的討論。"
->>>>>>> Stashed changes
+    # 定義虛擬函數，以防 GPT 不可用
+    def chat(prompt: str) -> str:
+        """虛擬 chat 函數"""
+        # 這裡應該調用實際的 GPT 接口
+        # 為了演示，返回一個模擬回應
+        responses = [
+            "基於深入分析，我認為這個議題需要從多個角度來考慮。首先，我們必須承認其複雜性，並理解不同立場背後的合理關切。",
+            "讓我從另一個角度來闡述這個問題。雖然對方提出了一些觀點，但我認為他們忽略了幾個關鍵因素。",
+            "我理解對方的擔憂，但我們需要基於事實和數據來討論。根據最新的研究顯示，這個議題的影響遠比表面看起來更深遠。"
+        ]
+        return random.choice(responses)
+
+# 嘗試導入所需模組
+try:
+    from rl.policy_network import select_strategy as _select_strategy, choose_snippet as _choose_snippet, PolicyNetwork as _PolicyNetwork
+    from gnn.social_encoder import social_vec as _social_vec
+    from rag.retriever import create_enhanced_retriever as _create_enhanced_retriever
+    from utils.config_loader import ConfigLoader as _ConfigLoader
+    
+    # 創建包裝函數
+    def select_strategy(query: str, context: str = "", social_context: List[float] = None) -> str:
+        """包裝 select_strategy 函數"""
+        return _select_strategy(query, context, social_context)
+    
+    def choose_snippet(state_text: str, pool: List[Dict]) -> str:
+        """包裝 choose_snippet 函數"""
+        return _choose_snippet(state_text, pool)
+    
+    def social_vec(agent_id: str) -> List[float]:
+        """包裝 social_vec 函數"""
+        return _social_vec(agent_id)
+        
+except ImportError as e:
+    print(f"⚠️ 部分模組導入失敗: {e}")
+    print("⚠️ 使用虛擬函數運行")
+    
+    # 定義虛擬函數
+    def select_strategy(query: str, context: str = "", social_context: List[float] = None) -> str:
+        """虛擬 select_strategy 函數"""
+        strategies = ['analytical', 'aggressive', 'defensive', 'empathetic']
+        return random.choice(strategies)
+    
+    def choose_snippet(state_text: str, pool: List[Dict]) -> str:
+        """虛擬 choose_snippet 函數"""
+        if pool:
+            return pool[0].get('content', 'No evidence available')
+        return "No evidence available"
+    
+    def social_vec(agent_id: str) -> List[float]:
+        """虛擬 social_vec 函數"""
+        return [random.random() for _ in range(128)]
 
 @dataclass
 class AgentState:
@@ -122,15 +141,53 @@ class ParallelOrchestrator:
     """平行處理辯論協調器"""
     
     def __init__(self):
-        self.policy_network = PolicyNetwork()
-        self.retriever = create_enhanced_retriever()
+        self.policy_network = None  # 延遲載入
+        self.retriever = None  # 延遲載入
         self.agent_states = {}
         self.debate_history = []
         
         # 執行器池
-        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=4)
+        self.executor = ThreadPoolExecutor(max_workers=4)
         
-        print("✅ 平行辯論協調器初始化完成")
+        print("   ✅ 平行辯論協調器初始化完成")
+        print("   ⚡ 執行器池: 4 個工作執行緒")
+        print("   💾 模型延遲載入: 將在首次使用時載入")
+    
+    def _get_policy_network(self):
+        """延遲載入 PolicyNetwork"""
+        if self.policy_network is None:
+            print("📦 首次使用，正在載入 RL 策略網路...")
+            print("   🔍 載入 DistilBERT 模型...")
+            start_time = time.time()
+            from rl.policy_network import PolicyNetwork
+            self.policy_network = PolicyNetwork()
+            load_time = time.time() - start_time
+            print(f"   ✅ RL 策略網路載入完成 ({load_time:.2f}s)")
+            print(f"   📊 模型大小: ~66M 參數")
+        return self.policy_network
+    
+    def _get_retriever(self):
+        """延遲載入 Retriever"""
+        if self.retriever is None:
+            print("📦 首次使用，正在載入 RAG 檢索器...")
+            start_time = time.time()
+            try:
+                print("   🔍 檢查 Chroma 向量資料庫...")
+                from rag.retriever import create_enhanced_retriever
+                self.retriever = create_enhanced_retriever()
+                load_time = time.time() - start_time
+                print(f"   ✅ RAG 檢索器載入完成 ({load_time:.2f}s)")
+            except Exception as e:
+                print(f"   ⚠️ 增強檢索器載入失敗: {e}")
+                print("   🔄 使用簡單檢索器...")
+                from rag.simple_retriever import SimpleRetriever
+                self.retriever = SimpleRetriever()
+                load_time = time.time() - start_time
+                print(f"   ✅ 簡單檢索器載入完成 ({load_time:.2f}s)")
+                # 獲取統計信息
+                stats = self.retriever.get_stats()
+                print(f"   📊 索引大小: {stats.get('total_documents', 0):,} 個文檔")
+        return self.retriever
     
     def initialize_agents(self, agent_configs: List[Dict]) -> Dict[str, AgentState]:
         """初始化 Agent 狀態"""
@@ -207,7 +264,7 @@ class ParallelOrchestrator:
             print(f"  📊 RL: 選擇策略 = {strategy}")
             
             # 預測品質分數
-            quality_score = self.policy_network.predict_quality(context)
+            quality_score = self._get_policy_network().predict_quality(context)
             print(f"  📊 RL: 品質分數 = {quality_score:.2f}")
             
             return {
@@ -259,7 +316,7 @@ class ParallelOrchestrator:
         """RAG 證據檢索分析"""
         try:
             # 檢索證據池
-            retrieval_results = self.retriever.retrieve(
+            retrieval_results = self._get_retriever().retrieve(
                 query=context,
                 top_k=8
             )
@@ -268,12 +325,22 @@ class ParallelOrchestrator:
             # 轉換為字典格式供 choose_snippet 使用
             evidence_pool = []
             for result in retrieval_results:
-                evidence_dict = {
-                    'content': result.content,
-                    'similarity_score': result.score,
-                    'metadata': result.metadata,
-                    'doc_id': result.doc_id
-                }
+                # 檢查 result 是否已經是字典（來自 SimpleRetrieverAdapter）
+                if isinstance(result, dict):
+                    evidence_dict = {
+                        'content': result.get('content', ''),
+                        'similarity_score': result.get('score', 0.0),
+                        'metadata': result.get('metadata', {}),
+                        'doc_id': result.get('doc_id', '')
+                    }
+                else:
+                    # 如果是物件（來自 EnhancedRetriever）
+                    evidence_dict = {
+                        'content': getattr(result, 'content', ''),
+                        'similarity_score': getattr(result, 'score', 0.0),
+                        'metadata': getattr(result, 'metadata', {}),
+                        'doc_id': getattr(result, 'doc_id', '')
+                    }
                 evidence_pool.append(evidence_dict)
             
             # 選擇最佳證據
@@ -283,7 +350,13 @@ class ParallelOrchestrator:
             # 分析證據類型分布
             evidence_types = {}
             for result in retrieval_results:
-                ev_type = result.metadata.get('type', 'unknown')
+                # 安全地獲取 metadata
+                if isinstance(result, dict):
+                    metadata = result.get('metadata', {})
+                else:
+                    metadata = getattr(result, 'metadata', {})
+                
+                ev_type = metadata.get('type', 'unknown')
                 evidence_types[ev_type] = evidence_types.get(ev_type, 0) + 1
             
             print(f"  📚 RAG: 證據類型分布 = {evidence_types}")
@@ -363,7 +436,9 @@ class ParallelOrchestrator:
         """生成辯論回覆"""
         
         # 1. 平行分析
-        print(f"🔄 Agent {agent_id} 開始平行分析...")
+        print(f"\n🔄 Agent {agent_id} 開始平行分析...")
+        print(f"   📝 主題: {topic}")
+        print(f"   📊 歷史回合數: {len(history)}")
         analysis_start = time.time()
         
         analysis_results = await self.parallel_analysis(agent_id, topic, history)
@@ -372,7 +447,9 @@ class ParallelOrchestrator:
         print(f"⚡ 平行分析完成 ({analysis_time:.2f}s)")
         
         # 2. 融合結果
+        print(f"🔀 開始融合分析結果...")
         fused_results = self.fuse_analysis_results(analysis_results, agent_id)
+        print(f"✅ 融合完成")
         
         # 3. 構建提示
         agent_state = self.agent_states[agent_id]
@@ -387,7 +464,10 @@ class ParallelOrchestrator:
         
         # 4. 生成回覆
         print(f"🤖 Agent {agent_id} 使用 {fused_results['final_strategy']} 策略生成回覆...")
+        generation_start = time.time()
         response = chat(prompt)
+        generation_time = time.time() - generation_start
+        print(f"✅ 回覆生成完成 ({generation_time:.2f}s)")
         
         # 檢查回應是否被截斷（檢查是否以句號、問號或驚嘆號結尾）
         if response and not response.rstrip().endswith(('。', '！', '？', '.', '!', '?')):
@@ -397,6 +477,9 @@ class ParallelOrchestrator:
         
         # 5. 評估回覆效果
         response_effects = self._evaluate_response(response, target_agents)
+        
+        total_time = time.time() - analysis_start
+        print(f"⏱️ Agent {agent_id} 總處理時間: {total_time:.2f}s")
         
         return response
     

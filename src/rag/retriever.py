@@ -224,18 +224,49 @@ class EnhancedRetriever:
         return stats
 
 # Convenience function
-def create_enhanced_retriever() -> EnhancedRetriever:
+def create_enhanced_retriever():
     """Create enhanced retriever instance"""
     try:
-        return EnhancedRetriever()
+        # 檢查是否有 Chroma 索引
+        chroma_path = Path('data/chroma/social_debate')
+        if chroma_path.exists():
+            print("🔍 嘗試載入 Chroma 向量索引...")
+            return EnhancedRetriever()
+        else:
+            print("⚠️ Chroma 索引不存在，使用簡單檢索器")
+            from .simple_retriever import SimpleRetriever
+            return SimpleRetrieverAdapter()
     except Exception as e:
-<<<<<<< Updated upstream
         print(f"❌ Failed to create retriever: {e}")
-        print("💡 Please run enhanced_build_index.py first to build indexes")
-        raise 
-=======
-        print(f"❌ 無法載入 Chroma 檢索器: {e}")
         print("💡 使用簡化版檢索器")
         from .simple_retriever import SimpleRetriever
-        return SimpleRetriever()
->>>>>>> Stashed changes
+        return SimpleRetrieverAdapter()
+
+class SimpleRetrieverAdapter:
+    """
+    適配器類，將 SimpleRetriever 的輸出格式轉換為與 EnhancedRetriever 兼容
+    """
+    def __init__(self):
+        from .simple_retriever import SimpleRetriever
+        self.simple_retriever = SimpleRetriever()
+    
+    def retrieve(self, query: str, top_k: int = 5, **kwargs) -> List[Dict]:
+        """檢索並轉換格式"""
+        results = self.simple_retriever.retrieve(query, top_k)
+        
+        # 轉換為字典格式
+        formatted_results = []
+        for result in results:
+            formatted_results.append({
+                'content': result.content,
+                'score': result.score,
+                'metadata': result.metadata,
+                'doc_id': result.doc_id,
+                'similarity_score': result.score
+            })
+        
+        return formatted_results
+    
+    def get_stats(self) -> Dict:
+        """獲取統計資訊"""
+        return self.simple_retriever.get_stats()

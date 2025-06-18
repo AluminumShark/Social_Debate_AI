@@ -1,0 +1,164 @@
+# RL (Reinforcement Learning) 配置
+
+# 策略網路架構
+policy_network:
+  # 模型基礎
+  base_model: "distilbert-base-uncased"
+  
+  # 網路維度
+  hidden_size: 256
+  social_dim: 128      # 社會背景向量維度
+  
+  # 策略設定
+  num_strategies: 4
+  strategies:
+    - name: "aggressive"
+      id: 0
+      description: "積極攻擊型 - 直接挑戰對方論點"
+    - name: "defensive"
+      id: 1
+      description: "防禦反駁型 - 鞏固自己的論點"
+    - name: "analytical"
+      id: 2
+      description: "分析論證型 - 理性分析各方觀點"
+    - name: "empathetic"
+      id: 3
+      description: "同理說服型 - 理解對方立場"
+  
+  # Dropout
+  dropout: 0.1
+
+# 訓練設定
+training:
+  # 基本參數
+  epochs: 3
+  learning_rate: 5e-5
+  batch_size: 16
+  max_length: 512
+  
+  # 自動批次大小調整（根據 GPU）
+  auto_batch_size:
+    enabled: true
+    gpu_memory_map:
+      "high": 32    # >= 20GB VRAM
+      "medium": 24  # >= 10GB VRAM
+      "low": 16     # < 10GB VRAM
+      "cpu": 8      # CPU 模式
+  
+  # 優化器設定
+  optimizer:
+    type: "adamw"
+    weight_decay: 0.01
+    eps: 1e-8
+  
+  # 學習率調度
+  scheduler:
+    type: "linear"
+    warmup_steps: 500
+    
+  # 混合精度訓練
+  mixed_precision:
+    enabled: true
+    opt_level: "O1"
+  
+  # 梯度裁剪
+  gradient_clipping: 1.0
+  
+  # 早停設定
+  early_stopping:
+    patience: 3
+    min_delta: 0.001
+    monitor: "val_loss"
+
+# 數據處理設定
+data_processing:
+  # 輸入數據
+  input_path: "data/raw/pairs.jsonl"
+  output_path: "data/rl/rl_pairs.csv"
+  
+  # 品質分數計算
+  quality_scoring:
+    # Delta 評論（成功說服）
+    delta_base_score: 1.0
+    
+    # Non-delta 評論
+    non_delta_base_score: 0.3
+    
+    # 分數權重
+    weights:
+      comment_score: 0.2
+      similarity: 0.2
+      length: 0.2
+      structure: 0.2
+      evidence: 0.2
+  
+  # 數據分割
+  train_split: 0.8
+  val_split: 0.1
+  test_split: 0.1
+  
+  # 採樣設定
+  max_samples: null  # null 表示使用所有數據
+  balanced_sampling: true
+
+# 評估設定
+evaluation:
+  # 評估指標
+  metrics:
+    - "mse"
+    - "mae"
+    - "rmse"
+    - "r2"
+    - "correlation"
+  
+  # 功能測試
+  functional_tests:
+    - "strategy_selection"
+    - "quality_prediction"
+    - "snippet_ranking"
+  
+  # 報告生成
+  generate_report: true
+  report_format: ["json", "txt", "png"]
+
+# 推理設定
+inference:
+  # Thompson Sampling 探索
+  exploration:
+    enabled: true
+    epsilon: 0.1
+    decay_rate: 0.995
+    min_epsilon: 0.01
+  
+  # 片段選擇
+  snippet_selection:
+    # 評分權重
+    weights:
+      relevance: 0.4
+      quality: 0.3
+      original: 0.3
+    
+    # 最大片段數
+    max_pool_size: 10
+
+# 模型保存設定
+checkpointing:
+  save_dir: "data/models/policy"
+  save_best_only: true
+  save_frequency: 1  # 每個 epoch
+  
+  # 保存內容
+  save_items:
+    - "model"
+    - "tokenizer"
+    - "config"
+    - "training_log"
+
+# 日誌設定
+logging:
+  level: "INFO"
+  log_dir: "logs/rl"
+  tensorboard: true
+
+# 隨機種子
+seed: 517466

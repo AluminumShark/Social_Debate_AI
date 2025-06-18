@@ -13,8 +13,10 @@ import uuid
 # 添加專案路徑
 import sys
 from pathlib import Path
-# 修正路徑：從 web 目錄回到專案根目錄，然後添加 src
-sys.path.append(str(Path(__file__).parent.parent / "src"))
+# 修正路徑：從 ui 目錄回到專案根目錄
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+sys.path.insert(0, str(project_root / "src"))
 
 # 導入必要模組
 try:
@@ -40,12 +42,15 @@ def init_system():
     global orchestrator, dialogue_manager, config
     
     try:
-        # 載入配置 - 修正路徑
+        # 步驟 1: 載入配置
+        print("📋 [1/4] 載入系統配置...")
         project_root = Path(__file__).parent.parent
         config_path = project_root / "configs" / "debate.yaml"
         if config_path.exists():
             config = ConfigLoader.load("debate", str(project_root / "configs"))
-            print(f"✅ 成功載入配置: {config_path}")
+            print(f"   ✅ 成功載入配置: {config_path}")
+            print(f"   📊 最大回合數: {config.get('debate', {}).get('max_rounds', 5)}")
+            print(f"   👥 參與者: {', '.join(config.get('debate', {}).get('agents', []))}")
         else:
             config = {
                 'debate': {
@@ -53,27 +58,39 @@ def init_system():
                     'agents': ['Agent_A', 'Agent_B', 'Agent_C']
                 }
             }
-            print("⚠️ 使用預設配置")
+            print("   ⚠️ 配置檔案不存在，使用預設配置")
         
-        # 初始化協調器
+        # 步驟 2: 初始化協調器
+        print("\n🎯 [2/4] 初始化平行協調器...")
         orchestrator = create_parallel_orchestrator()
+        print("   ✅ 協調器初始化成功")
+        print("   📌 支援模組: RL策略選擇、GNN社會編碼、RAG證據檢索")
         
-        # 初始化對話管理器 - 不需要傳遞 config
+        # 步驟 3: 初始化對話管理器
+        print("\n💬 [3/4] 初始化對話管理器...")
         dialogue_manager = DialogueManager()
+        print("   ✅ 對話管理器初始化成功")
+        print("   📝 支援功能: 對話歷史管理、回合控制、狀態追蹤")
         
-        # 初始化 Agents
+        # 步驟 4: 初始化 Agents
+        print("\n🤖 [4/4] 初始化智能體...")
         agent_configs = [
             {'id': 'Agent_A', 'initial_stance': 0.8, 'initial_conviction': 0.7},
             {'id': 'Agent_B', 'initial_stance': -0.6, 'initial_conviction': 0.6},
             {'id': 'Agent_C', 'initial_stance': 0.0, 'initial_conviction': 0.5}
         ]
         orchestrator.initialize_agents(agent_configs)
+        print("   ✅ 成功初始化 3 個智能體:")
+        print("   🔴 Agent_A: 積極支持型 (立場: +0.8)")
+        print("   🔵 Agent_B: 反對質疑型 (立場: -0.6)")
+        print("   🟢 Agent_C: 中立分析型 (立場: 0.0)")
         
-        print("✅ 系統初始化完成")
         return True
         
     except Exception as e:
-        print(f"❌ 系統初始化失敗: {e}")
+        print(f"\n❌ 系統初始化失敗: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 @app.route('/')
@@ -158,14 +175,29 @@ def api_debate_round():
     has_surrender = any(state.has_surrendered for state in orchestrator.agent_states.values())
     max_rounds = config.get('debate', {}).get('max_rounds', 5)
     
-    if has_surrender or current_round > max_rounds:
-        # 辯論結束，返回總結
+    # 檢查是否應該在執行回合前就結束辯論
+    if current_round > max_rounds:
+        # 辯論已超過最大回合數
         summary = orchestrator.get_debate_summary()
+        
+        # 獲取當前 Agent 狀態
+        agent_states = {}
+        for agent_id, state in orchestrator.agent_states.items():
+            agent_states[agent_id] = {
+                'stance': state.current_stance,
+                'conviction': state.conviction,
+                'has_surrendered': state.has_surrendered,
+                'persuasion_avg': sum(state.persuasion_history[-3:]) / min(3, len(state.persuasion_history)) if state.persuasion_history else 0
+            }
+        
         return jsonify({
             'success': True,
+            'round': current_round - 1,  # 返回實際的最後一輪
+            'responses': [],  # 空回應列表
+            'agent_states': agent_states,
             'debate_ended': True,
             'summary': summary,
-            'message': '辯論已結束！'
+            'message': '辯論已結束（達到最大回合數）'
         })
     
     try:
@@ -190,23 +222,35 @@ def api_debate_round():
             'responses': []
         }
         
-        for response in debate_round.history:
-            round_data['responses'].append({
-                'agent_id': response['agent_id'],
-                'content': response['content'],
-                'effects': response['effects'],
-                'timestamp': response['timestamp']
-            })
+        # 確保 debate_round.history 存在
+        if hasattr(debate_round, 'history') and debate_round.history:
+            for response in debate_round.history:
+                round_data['responses'].append({
+                    'agent_id': response.get('agent_id', ''),
+                    'content': response.get('content', ''),
+                    'effects': response.get('effects', {'persuasion_score': 0, 'attack_score': 0}),
+                    'timestamp': response.get('timestamp', '')
+                })
         
         # 獲取 Agent 狀態
         agent_states = {}
-        for agent_id, state in debate_round.agent_states.items():
-            agent_states[agent_id] = {
-                'stance': state.current_stance,
-                'conviction': state.conviction,
-                'has_surrendered': state.has_surrendered,
-                'persuasion_avg': sum(state.persuasion_history[-3:]) / min(3, len(state.persuasion_history)) if state.persuasion_history else 0
-            }
+        if hasattr(debate_round, 'agent_states') and debate_round.agent_states:
+            for agent_id, state in debate_round.agent_states.items():
+                agent_states[agent_id] = {
+                    'stance': state.current_stance,
+                    'conviction': state.conviction,
+                    'has_surrendered': state.has_surrendered,
+                    'persuasion_avg': sum(state.persuasion_history[-3:]) / min(3, len(state.persuasion_history)) if state.persuasion_history else 0
+                }
+        else:
+            # 如果沒有新的狀態，使用 orchestrator 的當前狀態
+            for agent_id, state in orchestrator.agent_states.items():
+                agent_states[agent_id] = {
+                    'stance': state.current_stance,
+                    'conviction': state.conviction,
+                    'has_surrendered': state.has_surrendered,
+                    'persuasion_avg': sum(state.persuasion_history[-3:]) / min(3, len(state.persuasion_history)) if state.persuasion_history else 0
+                }
         
         # 不再將完整歷史存儲在 session 中
         # 只存儲回合數和基本信息
@@ -214,7 +258,7 @@ def api_debate_round():
         session.modified = True
         
         # 檢查是否有人投降或達到最大回合數
-        debate_ended = any(state.has_surrendered for state in debate_round.agent_states.values()) or current_round >= max_rounds
+        debate_ended = any(state['has_surrendered'] for state in agent_states.values()) or current_round >= max_rounds
         
         response_data = {
             'success': True,
@@ -236,8 +280,14 @@ def api_debate_round():
         import traceback
         print(f"❌ 辯論執行失敗: {str(e)}")
         print(traceback.format_exc())
+        
+        # 返回錯誤時也要包含必要的數據結構
         return jsonify({
             'success': False,
+            'round': current_round,
+            'responses': [],
+            'agent_states': {},
+            'debate_ended': False,
             'message': f'辯論執行失敗: {str(e)}'
         }), 500
 

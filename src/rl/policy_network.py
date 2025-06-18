@@ -104,10 +104,14 @@ class PolicyNetwork:
         try:
             if self.quality_model_path.exists():
                 self.tokenizer = AutoTokenizer.from_pretrained(str(self.quality_model_path))
+                # 修復 meta tensor 錯誤：先載入到 CPU，再移動到目標設備
                 self.quality_model = AutoModelForSequenceClassification.from_pretrained(
-                    str(self.quality_model_path)
+                    str(self.quality_model_path),
+                    torch_dtype=torch.float32,  # 指定數據類型
+                    low_cpu_mem_usage=False     # 關閉低內存模式
                 )
-                self.quality_model.to(self.device)
+                # 確保模型在正確的設備上
+                self.quality_model = self.quality_model.to(self.device)
                 self.quality_model.eval()
                 print(f"✅ 載入品質評估模型: {self.quality_model_path}")
             else:

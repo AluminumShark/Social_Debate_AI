@@ -1,57 +1,48 @@
-# 🚀 Social Debate AI 快速開始指南
+# 🚀 快速開始指南
 
-本指南將幫助您在 5 分鐘內啟動並運行 Social Debate AI 系統。
+5 分鐘內啟動並運行 Social Debate AI！
 
-## 📋 前置需求
+## 📋 前置要求
 
-- Python 3.8 或更高版本
+- Python 3.8+
+- 8GB+ RAM
 - Git
-- 至少 8GB RAM
-- OpenAI API Key（可選，用於真實 GPT 回應）
 
 ## 🔧 安裝步驟
 
 ### 1. 克隆專案
-
 ```bash
 git clone https://github.com/your-username/Social_Debate_AI.git
 cd Social_Debate_AI
 ```
 
-### 2. 創建虛擬環境（推薦）
-
+### 2. 創建虛擬環境
 ```bash
-# Windows
-python -m venv venv
-venv\Scripts\activate
+# 使用 conda（推薦）
+conda create -n social_debate python=3.8
+conda activate social_debate
 
-# Linux/Mac
-python3 -m venv venv
-source venv/bin/activate
+# 或使用 venv
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+venv\Scripts\activate     # Windows
 ```
 
 ### 3. 安裝依賴
-
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. 設置環境變數（可選）
-
-創建 `.env` 文件：
-
+### 4. 設置 API Key（可選）
+如果要使用完整的 RAG 功能：
 ```bash
-# 複製範例文件
-cp .env.example .env
-
+cp env.example .env
 # 編輯 .env 文件，添加您的 OpenAI API Key
-OPENAI_API_KEY=your-api-key-here
 ```
 
 ## 🎮 快速運行
 
-### 方式一：使用啟動腳本（推薦）
-
+### 方式一：使用 Web UI（推薦）
 ```bash
 # Windows
 scripts\start_flask.bat
@@ -59,146 +50,98 @@ scripts\start_flask.bat
 # Linux/Mac
 chmod +x scripts/start_flask.sh
 ./scripts/start_flask.sh
-```
 
-### 方式二：直接運行
-
-```bash
+# 或直接運行
 python run_flask.py
 ```
 
-### 方式三：開發模式
+打開瀏覽器訪問 http://localhost:5000
 
+### 方式二：快速演示
 ```bash
-cd ui
-python app.py
+# 使用預設模型運行演示
+python quick_demo.py
 ```
 
-## 🌐 訪問系統
+## 📚 使用 Web UI
 
-啟動後，在瀏覽器中訪問：
+### 1. 初始化系統
+- 打開 http://localhost:5000
+- 系統會自動初始化
 
-- 本地訪問：http://localhost:5000
-- 網路訪問：http://[您的IP]:5000
+### 2. 設置辯論主題
+輸入您想討論的主題，例如：
+- "人工智慧是否應該被政府監管？"
+- "基本收入是否可行？"
+- "社交媒體的影響是正面還是負面？"
 
-## 📱 使用界面
+### 3. 開始辯論
+- 點擊「下一回合」按鈕
+- 觀察三個 Agent 的辯論過程
+- 查看實時的立場和信念變化
 
-### 主界面說明
+### 4. 分析結果
+- 系統會自動判定勝負
+- 可以導出完整的辯論記錄
 
-```
-┌─────────────────────────────────────────────────┐
-│                 Social Debate AI                 │
-├─────────────────────────────────────────────────┤
-│  ┌──────────────┐  ┌─────────────────────────┐  │
-│  │ 辯論設置     │  │ 辯論內容               │  │
-│  │              │  │                         │  │
-│  │ 主題: _____ │  │ [辯論對話顯示區域]     │  │
-│  │ [設置主題]   │  │                         │  │
-│  │ [下一回合]   │  │                         │  │
-│  │              │  │                         │  │
-│  │ Agent 狀態   │  │                         │  │
-│  │ A: ████░░░░ │  │                         │  │
-│  │ B: ██░░░░░░ │  │                         │  │
-│  │ C: █████░░░ │  │                         │  │
-│  └──────────────┘  └─────────────────────────┘  │
-└─────────────────────────────────────────────────┘
-```
+## 🎓 訓練模型（可選）
 
-### 操作步驟
+如果您有原始數據並想訓練自己的模型：
 
-1. **設置辯論主題**
-   - 在左側輸入框中輸入辯論主題
-   - 點擊「設置主題」按鈕
-
-2. **開始辯論**
-   - 點擊「下一回合」按鈕
-   - 系統將自動進行一輪辯論
-
-3. **觀察進度**
-   - 查看右側的辯論內容
-   - 觀察左側 Agent 的狀態變化
-
-4. **辯論結束**
-   - 當有 Agent 投降或達到最大回合數時結束
-   - 系統會顯示勝負結果
-
-5. **導出或重置**
-   - 點擊頂部「導出」保存辯論記錄
-   - 點擊「重置」開始新的辯論
-
-## 🎯 範例主題
-
-試試這些有趣的辯論主題：
-
-- 人工智慧是否應該由政府監管？
-- 遠程工作是否比辦公室工作更有效率？
-- 社交媒體對社會的影響是正面還是負面？
-- 加密貨幣是否會取代傳統貨幣？
-- 基因編輯技術是否應該用於人類增強？
-
-## 🛠️ 命令行模式
-
-如果您想使用命令行界面：
-
+### 快速訓練（演示規模）
 ```bash
-python run_social_debate_ai.py
+# 訓練小規模模型（約 10 分鐘）
+python train_all.py --all --demo
 ```
 
-## 🔧 常見問題
-
-### Q1: 出現 "Module not found" 錯誤
-**A:** 確保已安裝所有依賴：
+### 完整訓練
 ```bash
-pip install -r requirements.txt
+# 訓練完整模型（約 30-60 分鐘）
+python train_all.py --all
 ```
 
-### Q2: OpenAI API 錯誤
-**A:** 檢查您的 API Key 是否正確設置在 `.env` 文件中
+## 🔍 驗證安裝
 
-### Q3: 端口被佔用
-**A:** 修改 `run_flask.py` 中的端口號：
-```python
-app.run(host='0.0.0.0', port=5001)  # 改為其他端口
+運行系統測試：
+```bash
+python test_system_integrity.py
 ```
 
-### Q4: 無法訪問網頁
-**A:** 檢查防火牆設置，確保允許 5000 端口
+預期輸出：
+```
+✅ GPT 接口測試通過
+✅ RAG 系統測試通過
+✅ GNN 系統測試通過
+✅ RL 系統測試通過
+✅ 系統整合測試通過
+```
 
-## 📊 系統需求
+## ❓ 常見問題
 
-### 最低需求
-- CPU: 雙核處理器
-- RAM: 8GB
-- 硬碟: 5GB 可用空間
+### Q: 沒有 GPU 可以運行嗎？
+A: 可以！系統會自動使用 CPU。訓練會慢一些，但推理速度影響不大。
 
-### 推薦配置
-- CPU: 四核處理器或更高
-- RAM: 16GB
-- GPU: NVIDIA GPU（用於加速推理）
-- 硬碟: 10GB 可用空間
+### Q: 必須要 OpenAI API Key 嗎？
+A: 不是必須的。沒有 API Key 時會使用簡單索引，功能略有限制。
 
-## 🎓 下一步
+### Q: 如何更改辯論參數？
+A: 編輯 `configs/debate.yaml` 文件，可以調整回合數、Agent 數量等。
 
-恭喜！您已成功運行 Social Debate AI。接下來您可以：
+### Q: 系統佔用太多記憶體？
+A: 可以在配置文件中減小批次大小，或使用 `--demo` 模式。
 
-1. **深入了解系統**
-   - 閱讀 [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) 了解專案結構
-   - 查看 [TECHNICAL_DETAILS.md](TECHNICAL_DETAILS.md) 了解技術原理
+## 📖 下一步
 
-2. **訓練自己的模型**
-   - 參考 [RL_TRAINING_GUIDE.md](RL_TRAINING_GUIDE.md) 訓練 RL 模型
-   - 查看 [TECHNICAL_DETAILS.md](TECHNICAL_DETAILS.md) 了解其他模組訓練
+- 查看[訓練指南](TRAINING_GUIDE.md)了解如何訓練模型
+- 查看[API 文檔](API_REFERENCE.md)了解如何集成到您的應用
+- 查看[部署指南](DEPLOYMENT.md)了解生產環境部署
 
-3. **參與開發**
-   - Fork 專案並提交 Pull Request
-   - 在 Issues 中報告問題或建議
+## 🆘 需要幫助？
 
-## 💡 提示
-
-- 第一次運行可能需要下載模型，請耐心等待
-- 使用真實的 OpenAI API 可獲得更好的辯論效果
-- 嘗試不同的辯論主題以探索系統能力
+- 提交 [GitHub Issue](https://github.com/your-username/Social_Debate_AI/issues)
+- 發送郵件至 your-email@example.com
+- 查看[完整文檔](../README.md)
 
 ---
 
-如有任何問題，歡迎查看其他文檔或提出 Issue！ 
+🎉 恭喜！您已經成功運行 Social Debate AI。開始探索智能辯論的世界吧！ 

@@ -160,9 +160,6 @@ class RLTrainer:
             fp16=torch.cuda.is_available(),  # 混合精度訓練
             dataloader_num_workers=0,  # 避免多進程問題
             remove_unused_columns=False,
-            # 早停機制
-            early_stopping_patience=2,
-            early_stopping_threshold=0.001,
         )
     
     def train(self) -> Dict:

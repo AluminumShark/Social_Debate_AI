@@ -122,6 +122,8 @@ class RLDataProcessor:
         samples = []
         valid_count = 0
         total_count = 0
+        delta_comment_count = 0
+        nodelta_comment_count = 0
         
         with open(self.input_path, 'r', encoding='utf-8') as f:
             for line in tqdm(f, desc="處理數據"):
@@ -132,9 +134,13 @@ class RLDataProcessor:
                     submission = data.get('submission', {})
                     similarity = data.get('comments_similarity', 0.0)
                     
-                    # 處理 delta 評論
-                    delta_comment = data.get('delta_comment')
-                    if delta_comment and delta_comment.get('body'):
+                    # 處理所有 delta 評論
+                    delta_data = data.get('delta_comment', {})
+                    if delta_data and 'comments' in delta_data and delta_data['comments']:
+                        # 處理所有評論
+                        for delta_comment in delta_data['comments']:
+                            if delta_comment.get('body'):
+                                delta_comment_count += 1
                         features = self.extract_features(submission, delta_comment)
                         if features['text'] and len(features['text']) > 20:
                             score = self.calculate_quality_score(
@@ -150,9 +156,13 @@ class RLDataProcessor:
                             })
                             valid_count += 1
                     
-                    # 處理 non-delta 評論
-                    nodelta_comment = data.get('nodelta_comment')
-                    if nodelta_comment and nodelta_comment.get('body'):
+                    # 處理所有 non-delta 評論
+                    nodelta_data = data.get('nodelta_comment', {})
+                    if nodelta_data and 'comments' in nodelta_data and nodelta_data['comments']:
+                        # 處理所有評論
+                        for nodelta_comment in nodelta_data['comments']:
+                            if nodelta_comment.get('body'):
+                                nodelta_comment_count += 1
                         features = self.extract_features(submission, nodelta_comment)
                         if features['text'] and len(features['text']) > 20:
                             score = self.calculate_quality_score(
@@ -173,8 +183,10 @@ class RLDataProcessor:
         
         print(f"📊 數據處理完成:")
         print(f"  總記錄數: {total_count}")
+        print(f"  Delta 評論總數: {delta_comment_count}")
+        print(f"  Non-delta 評論總數: {nodelta_comment_count}")
         print(f"  有效樣本: {valid_count}")
-        print(f"  有效率: {valid_count/total_count*100:.1f}%")
+        print(f"  有效率: {valid_count/(delta_comment_count + nodelta_comment_count)*100:.1f}%")
         
         # 轉換為 DataFrame
         df = pd.DataFrame(samples)

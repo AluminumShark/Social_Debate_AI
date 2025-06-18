@@ -1,0 +1,72 @@
+# RAG (Retrieval-Augmented Generation) 配置
+
+# Chroma 向量資料庫設定
+chroma:
+  # 索引路徑
+  persist_directory: "data/chroma/social_debate"
+  collection_name: "social_debate_collection"
+  
+  # 嵌入模型設定
+  embedding:
+    model: "text-embedding-3-small"
+    dimension: 1536
+    batch_size: 500
+  
+  # 檢索參數
+  retrieval:
+    top_k: 8
+    score_threshold: 0.0
+    include_metadata: true
+
+# 簡化檢索器設定（備用）
+simple_retriever:
+  index_path: "src/rag/data/rag/simple_index.json"
+  top_k: 3
+  use_fuzzy_match: true
+
+# 證據選擇設定
+evidence_selection:
+  # 評分權重
+  weights:
+    relevance: 0.4
+    quality: 0.3
+    similarity: 0.3
+  
+  # 證據類型優先級
+  type_preference:
+    - "research"
+    - "expert_opinion"
+    - "case_study"
+    - "statistics"
+    - "anecdotal"
+
+# 索引構建設定
+indexing:
+  # 數據源
+  data_source: "data/raw/pairs.jsonl"
+  
+  # 文檔處理
+  chunk_size: 1000
+  chunk_overlap: 200
+  min_chunk_length: 100
+  
+  # 元數據提取
+  extract_metadata: true
+  metadata_fields:
+    - "submission_id"
+    - "score"
+    - "author"
+    - "created_utc"
+    - "delta_awarded"
+  
+  # 品質過濾
+  quality_filter:
+    min_score: 10
+    min_length: 50
+    max_length: 5000
+
+# 快取設定
+cache:
+  enabled: true
+  ttl: 3600  # 秒
+  max_size: 1000

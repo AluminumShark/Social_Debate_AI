@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch_geometric.nn as tgnn
 # from torch_geometric.loader import NeighborLoader  # 註解掉，使用完整圖訓練
-from cmv_dataset import get_pyg_data, NUM_FEATURES
+from .cmv_dataset import get_pyg_data, NUM_FEATURES
 from pathlib import Path
 from tqdm import tqdm
 
