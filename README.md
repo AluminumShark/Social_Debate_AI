@@ -255,5 +255,3 @@ Social_Debate_AI/
 ---
 
 ⭐ 如果這個專案對您有幫助，請給我們一個 Star！
-
-📧 聯繫方式：your-email@example.com
