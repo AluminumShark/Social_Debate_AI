@@ -19,44 +19,18 @@
 ## 🏗️ 系統架構
 
 ```mermaid
-flowchart TB
-    subgraph User["👤 用戶介面"]
-        UI[["🌐 Flask Web UI<br/>現代化響應式設計"]]
-    end
+graph TB
+    UI["🌐 Web UI"]
+    PO["🎯 Orchestrator"]
+    AI["🤖 AI Modules<br/>RL + GNN + RAG"]
+    GPT["💬 GPT"]
+    Agents["👥 3 Agents"]
     
-    subgraph Core["🧠 核心系統"]
-        direction TB
-        PO[["⚡ Parallel Orchestrator<br/>並行協調器"]]
-        DM[["🎭 Dialogue Manager<br/>對話管理器"]]
-    end
-    
-    subgraph AI["🤖 AI 模組"]
-        direction LR
-        RAG[["📚 RAG<br/>檢索增強生成<br/>45,974 文檔"]]
-        GNN[["🔗 GNN<br/>圖神經網路<br/>14,307 節點"]]
-        RL[["🎮 RL<br/>強化學習<br/>36,277 樣本"]]
-    end
-    
-    subgraph Agents["💭 智能體"]
-        direction LR
-        A[["🔴 Agent A<br/>立場: +0.8<br/>激進派"]]
-        B[["🟢 Agent B<br/>立場: -0.6<br/>反對派"]]
-        C[["🟡 Agent C<br/>立場: 0.0<br/>中立派"]]
-    end
-    
-    UI <==> PO
-    PO <==> DM
-    PO ==> RAG & GNN & RL
-    DM <==> A & B & C
-    
-    RAG -.->|證據| DM
-    GNN -.->|社會影響| DM
-    RL -.->|策略選擇| DM
-    
-    style User fill:#FFE4E1,stroke:#FF1493,stroke-width:3px
-    style Core fill:#F0E68C,stroke:#DAA520,stroke-width:3px
-    style AI fill:#E0FFFF,stroke:#00CED1,stroke-width:3px
-    style Agents fill:#F5F5DC,stroke:#8B4513,stroke-width:3px
+    UI --> PO
+    PO --> AI
+    AI --> GPT
+    GPT --> Agents
+    Agents --> PO
 ```
 
 ## 🚀 快速開始
