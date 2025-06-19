@@ -282,5 +282,4 @@ CUDA_VISIBLE_DEVICES=0,1 python train_all.py --all
 ---
 
 💡 **提示**：訓練過程中如遇到問題，請查看日誌文件或提交 Issue。
-
-📧 **支援**：如需協助，請聯繫 your-email@example.com 
+ 
