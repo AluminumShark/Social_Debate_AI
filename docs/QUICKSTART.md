@@ -139,7 +139,6 @@ A: 可以在配置文件中減小批次大小，或使用 `--demo` 模式。
 ## 🆘 需要幫助？
 
 - 提交 [GitHub Issue](https://github.com/your-username/Social_Debate_AI/issues)
-- 發送郵件至 your-email@example.com
 - 查看[完整文檔](../README.md)
 
 ---
