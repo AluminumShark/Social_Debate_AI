@@ -1,4 +1,4 @@
-# �� Social Debate AI
+# 🤖 Social Debate AI
 
 *English | [中文](#chinese-version)*
 
