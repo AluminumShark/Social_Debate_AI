@@ -2,30 +2,36 @@
 
 # 模型架構
 model:
-  # Deep Graph Infomax (DGI) 參數
-  architecture: "DGI"
+  # 監督式學習架構
+  architecture: "PersuasionGNN"
   
   # 維度設定
-  input_dim: 768        # BERT/DistilBERT 輸出維度
+  input_dim: 770         # BERT (768) + 論證特徵 (2)
   hidden_dim: 256       # 隱藏層維度
-  output_dim: 128       # 社會向量維度
+  output_dim: 128       # 嵌入向量維度
   
   # 網路層數
-  num_layers: 2
+  num_layers: 3
   
   # 正則化
-  dropout: 0.1
+  dropout: 0.2
   
   # 激活函數
   activation: "relu"
   
   # 圖卷積類型
-  conv_type: "GCN"  # GCN, GAT, GraphSAGE
+  conv_type: "GraphSAGE"  # 使用 GraphSAGE
+  
+  # 注意力機制
+  attention:
+    enabled: true
+    heads: 4
+    concat: false
 
 # 訓練設定
 training:
   # 基本參數
-  epochs: 200
+  epochs: 50
   learning_rate: 0.001
   batch_size: 32
   
@@ -36,75 +42,71 @@ training:
   # 學習率調度
   scheduler:
     type: "step"
-    step_size: 50
+    step_size: 10
     gamma: 0.5
   
   # 早停
   early_stopping:
-    patience: 20
+    patience: 10
     min_delta: 0.001
     
-  # 負樣本策略
-  negative_sampling:
-    strategy: "corruption"  # 節點特徵打亂
-    num_negatives: 1
+  # 多任務權重
+  task_weights:
+    delta_prediction: 0.5    # Delta 預測權重
+    quality_regression: 0.3  # 品質分數權重
+    strategy_classification: 0.2  # 策略分類權重
 
-# 圖構建設定
-graph_construction:
-  # 節點設定
-  nodes:
-    - id: "Agent_A"
-      features: "stance_based"
-    - id: "Agent_B"
-      features: "stance_based"
-    - id: "Agent_C"
-      features: "stance_based"
+# 說服力預測設定
+persuasion_prediction:
+  # 策略類別
+  strategies:
+    - aggressive    # 積極攻擊型
+    - defensive     # 防禦反駁型
+    - analytical    # 分析論證型
+    - empathetic    # 同理說服型
   
-  # 邊設定
-  edges:
-    # 初始連接（全連接）
-    initial_connections: "full"
-    
-    # 邊權重計算
-    weight_function: "interaction_strength"
-    
-    # 動態更新
-    dynamic_update: true
-    update_frequency: "per_round"
+  # 論證特徵提取
+  argument_features:
+    causal_markers: ["because", "therefore", "thus", "hence", "consequently"]
+    contrast_markers: ["however", "but", "although", "despite", "nevertheless"]
+    evidence_markers: ["studies show", "research indicates", "data suggests", "according to"]
+    example_markers: ["for example", "for instance", "such as", "like"]
+    emphasis_markers: ["indeed", "in fact", "clearly", "obviously", "certainly"]
 
 # 社會影響力計算
 social_influence:
-  # 影響力維度
-  direct_influence_dims: 10
-  indirect_influence_dims: 40
+  # 影響力計算方法
+  method: "model_based"  # 基於模型預測
   
   # 權重分配
   weights:
-    direct: 0.7
-    indirect: 0.3
-  
-  # 衰減因子
-  decay_factor: 0.9
+    delta_probability: 0.7
+    quality_score: 0.3
 
 # 模型保存設定
 checkpointing:
-  save_dir: "data/models/gnn"
-  save_frequency: 10  # 每 N 個 epoch 保存一次
-  keep_last_n: 3      # 保留最近 N 個檢查點
+  save_dir: "data/models"
+  model_name: "gnn_persuasion.pt"
+  save_best_only: true
+  monitor_metric: "delta_accuracy"
 
 # 評估設定
 evaluation:
   # 評估指標
   metrics:
-    - "reconstruction_loss"
-    - "mutual_information"
-    - "embedding_quality"
+    - delta_accuracy
+    - delta_f1_score
+    - strategy_accuracy
+    - quality_mse
   
-  # 視覺化
-  visualization:
-    enabled: true
-    save_embeddings: true
-    plot_frequency: 20
+  # 測試集比例
+  test_split: 0.2
+  
+  # 隨機種子
+  random_seed: 42
 
-# 隨機種子（確保可重複性）
-seed: 517466
+# 日誌設定
+logging:
+  level: "INFO"
+  log_dir: "logs/gnn"
+  tensorboard: false

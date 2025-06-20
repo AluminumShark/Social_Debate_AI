@@ -68,7 +68,7 @@ def test_data_files():
     data_files = [
         ("RAG 簡單索引", "src/rag/data/rag/simple_index.json"),
         ("RL 模型", "data/models/policy/pytorch_model.bin"),
-        ("GNN 模型", "data/models/gnn_social.pt"),
+        ("GNN 監督式模型", "data/models/gnn_persuasion.pt"),
     ]
     
     results = []
@@ -86,18 +86,18 @@ def test_ui_files():
     """測試 UI 檔案"""
     print("\n🔍 測試 UI 檔案...")
     
-    ui_files = [
-        "ui/app.py",
-        "ui/templates/index.html",
-        "ui/static/css/style.css",
-        "ui/static/js/app.js"
-    ]
+    ui_files = {
+        'ui/app.py': 'Flask 應用主程式',
+        'ui/templates/index.html': 'HTML 模板',
+        'ui/static/css/modern-style.css': 'CSS 樣式',
+        'ui/static/js/modern-app.js': 'JavaScript'
+    }
     
     results = []
-    for ui_file in ui_files:
+    for ui_file, description in ui_files.items():
         path = Path(ui_file)
         if path.exists():
-            results.append((ui_file, "✅ 存在"))
+            results.append((ui_file, f"✅ 存在 ({description})"))
         else:
             results.append((ui_file, "❌ 不存在"))
     

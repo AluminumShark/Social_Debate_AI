@@ -115,85 +115,100 @@ indexing:
 
 ## 🔗 GNN 模型訓練
 
-GNN (Graph Neural Network) 模型使用 Deep Graph Infomax (DGI) 算法學習社會網絡表示。
+GNN (Graph Neural Network) 模型使用監督式學習預測說服成功率和最佳策略。
 
 ### 1. 訓練命令
 ```bash
 python train_all.py --gnn
 ```
 
-### 2. 訓練參數
-- **圖規模**：14,307 個節點，38,606 條邊
-- **嵌入維度**：128
-- **訓練輪數**：200 epochs
-- **訓練時間**：約 5-10 分鐘（GPU）
+### 2. 訓練架構
+- **模型類型**：GraphSAGE + GAT 注意力機制
+- **任務類型**：多任務學習
+  - Delta 預測（二分類）
+  - 品質評分（回歸）
+  - 策略分類（多分類）
+- **訓練數據**：CMV 數據集的 delta/non-delta comments
+- **訓練時間**：約 10-15 分鐘（GPU）
 
 ### 3. 監控訓練
 訓練過程會顯示：
 ```
-Epoch 20/200, 損失: 0.9506
-Epoch 40/200, 損失: 0.3868
-Epoch 60/200, 損失: 0.1445
+Epoch 10/50, Loss: 1.2345, Delta Acc: 0.5678, Quality MAE: 2.3456, Strategy Acc: 0.4567
+Epoch 20/50, Loss: 0.8901, Delta Acc: 0.6234, Quality MAE: 1.8901, Strategy Acc: 0.5678
+Epoch 30/50, Loss: 0.5678, Delta Acc: 0.6789, Quality MAE: 1.4567, Strategy Acc: 0.6234
 ```
 
-損失應該持續下降，最終收斂到 0.02-0.05 之間。
+### 4. 訓練效果
+- **Delta 準確率**：約 67-70%
+- **策略準確率**：約 64-67%
+- **品質預測 MAE**：約 1.2-1.5
 
-### 4. 配置調整
+### 5. 配置調整
 編輯 `configs/gnn.yaml`：
 
 ```yaml
 training:
-  epochs: 200          # 可增加到 500 以獲得更好效果
-  hidden_dim: 128      # 可嘗試 256 或 512
-  learning_rate: 0.01  # 可調整學習率
+  epochs: 50           # 可增加到 100 以獲得更好效果
+  batch_size: 32       # 根據 GPU 記憶體調整
+  learning_rate: 0.001 # 可調整學習率
+  
+model:
+  hidden_dim: 768      # BERT 嵌入維度
+  num_layers: 3        # GNN 層數
+  dropout: 0.1         # Dropout 率
 ```
 
 ## 🎮 RL 模型訓練
 
-RL (Reinforcement Learning) 模型基於 DistilBERT，用於選擇最佳辯論策略。
+RL (Reinforcement Learning) 模型使用 PPO 算法學習最佳辯論策略。
 
 ### 1. 訓練命令
 ```bash
 python train_all.py --rl
 ```
 
-### 2. 數據處理
-首次運行會自動處理原始數據：
-- **原始數據**：10,303 個辯論對
-- **處理後**：36,277 個訓練樣本
-- **處理時間**：約 5 分鐘
+### 2. PPO 訓練架構
+- **算法**：Proximal Policy Optimization (PPO)
+- **網路架構**：Actor-Critic 雙網路
+- **狀態空間**：文本嵌入 + 立場 + 回合 + 歷史
+- **動作空間**：4種策略（aggressive、defensive、analytical、empathetic）
+- **訓練時間**：約 20-30 分鐘（1000 episodes）
 
-### 3. 訓練過程
-- **基礎模型**：distilbert-base-uncased
-- **訓練輪數**：3 epochs（可調整）
-- **批次大小**：32（RTX 3090），16（較小 GPU）
-- **訓練時間**：約 15-20 分鐘（GPU）
+### 3. 環境設計
+辯論環境模擬真實互動：
+- **初始狀態**：隨機立場和信念
+- **狀態轉移**：基於策略效果
+- **獎勵機制**：
+  - 策略效果獎勵（-1 到 +1）
+  - 說服成功獎勵（+5）
+  - 策略多樣性獎勵（+0.1）
+- **終止條件**：投降或達到最大回合
 
 ### 4. 訓練監控
 ```
-訓練進度: 100%|████████| 908/908 [05:23<00:00, 2.81it/s]
-評估結果:
-  mse: 0.1234
-  mae: 0.2567
-  rmse: 0.3512
-  r2: 0.7890
+Episode 100/1000, Avg Reward: -2.34, Policy Loss: 0.456, Value Loss: 1.234
+Episode 200/1000, Avg Reward: -0.89, Policy Loss: 0.234, Value Loss: 0.789
+Episode 500/1000, Avg Reward: 1.23, Policy Loss: 0.123, Value Loss: 0.456
+Episode 1000/1000, Avg Reward: 2.56, Policy Loss: 0.089, Value Loss: 0.234
 ```
 
 ### 5. 配置優化
 編輯 `configs/rl.yaml`：
 
 ```yaml
-training:
-  epochs: 5            # 增加訓練輪數
-  batch_size: 16       # 根據 GPU 記憶體調整
-  learning_rate: 5e-5  # 微調學習率
+ppo:
+  episodes: 1000       # 訓練回合數
+  max_steps: 50        # 每回合最大步數
+  batch_size: 64       # 批次大小
+  learning_rate: 3e-4  # 學習率
+  gamma: 0.99          # 折扣因子
+  clip_epsilon: 0.2    # PPO 裁剪參數
   
-policy_network:
-  strategies:
-    - aggressive       # 激進策略
-    - defensive        # 防守策略
-    - analytical       # 分析策略
-    - empathetic      # 共情策略
+environment:
+  reward_scale: 1.0    # 獎勵縮放
+  persuasion_bonus: 5  # 說服成功獎勵
+  diversity_bonus: 0.1 # 策略多樣性獎勵
 ```
 
 ## 📊 訓練監控

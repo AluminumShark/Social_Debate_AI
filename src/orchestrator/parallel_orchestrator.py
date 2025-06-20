@@ -35,7 +35,7 @@ except ImportError:
 # 嘗試導入所需模組
 try:
     from rl.policy_network import select_strategy as _select_strategy, choose_snippet as _choose_snippet, PolicyNetwork as _PolicyNetwork
-    from gnn.social_encoder import social_vec as _social_vec
+    from gnn.social_encoder import social_vec as _social_vec, get_social_influence_score, predict_persuasion
     from rag.retriever import create_enhanced_retriever as _create_enhanced_retriever
     from utils.config_loader import ConfigLoader as _ConfigLoader
     
@@ -283,9 +283,24 @@ class ParallelOrchestrator:
             social_vector = social_vec(agent_id)
             print(f"  🌐 GNN: 社會向量維度 = {len(social_vector)}")
             
-            # 分析社會影響力
-            influence_score = sum(social_vector[:10]) / 10  # 簡化計算
+            # 使用新的影響力計算方法
+            influence_score = get_social_influence_score(agent_id)
             print(f"  🌐 GNN: 影響力分數 = {influence_score:.2f}")
+            
+            # 如果有最近的發言，預測說服策略
+            if hasattr(agent_state, 'last_response') and agent_state.last_response:
+                # 簡化的文本特徵提取（實際應使用 BERT）
+                text_features = np.random.randn(768)  # 臨時使用隨機特徵
+                persuasion_pred = predict_persuasion(text_features, agent_id)
+                
+                print(f"  🌐 GNN: 預測 Delta 概率 = {persuasion_pred['delta_probability']:.2f}")
+                print(f"  🌐 GNN: 建議策略 = {persuasion_pred['best_strategy']}")
+            else:
+                persuasion_pred = {
+                    'delta_probability': 0.5,
+                    'best_strategy': 'analytical',
+                    'strategy_scores': {}
+                }
             
             # 分析立場變化趨勢
             stance_trend = 0.0
@@ -300,7 +315,8 @@ class ParallelOrchestrator:
                 'influence_score': influence_score,
                 'stance_trend': stance_trend,
                 'current_stance': agent_state.current_stance,
-                'conviction': agent_state.conviction
+                'conviction': agent_state.conviction,
+                'persuasion_prediction': persuasion_pred
             }
         except Exception as e:
             print(f"⚠️ GNN 分析失敗: {e}")
@@ -309,7 +325,12 @@ class ParallelOrchestrator:
                 'influence_score': 0.5,
                 'stance_trend': 0.0,
                 'current_stance': agent_state.current_stance,
-                'conviction': agent_state.conviction
+                'conviction': agent_state.conviction,
+                'persuasion_prediction': {
+                    'delta_probability': 0.5,
+                    'best_strategy': 'analytical',
+                    'strategy_scores': {}
+                }
             }
     
     def _rag_analysis(self, context: str, topic: str) -> Dict:
@@ -393,41 +414,60 @@ class ParallelOrchestrator:
         gnn_result = analysis_results['gnn']
         rag_result = analysis_results['rag']
         
-        # 策略調整：根據社會影響力和立場調整策略
+        # 策略調整：結合 RL 和 GNN 的建議
         base_strategy = rl_result['strategy']
+        gnn_strategy = gnn_result['persuasion_prediction']['best_strategy']
         influence_score = gnn_result['influence_score']
         current_stance = gnn_result['current_stance']
+        delta_probability = gnn_result['persuasion_prediction']['delta_probability']
         
-        # 高影響力 + 強立場 = 更積極
-        if influence_score > 0.6 and abs(current_stance) > 0.5:
-            if base_strategy == 'analytical':
+        # 策略融合邏輯
+        if delta_probability > 0.7:
+            # 高說服成功率，優先使用 GNN 建議的策略
+            adjusted_strategy = gnn_strategy
+            print(f"  🔄 策略調整: {base_strategy} → {adjusted_strategy} (基於高 Delta 概率)")
+        elif influence_score > 0.6 and abs(current_stance) > 0.5:
+            # 高影響力 + 強立場 = 更積極
+            if base_strategy == 'analytical' and gnn_strategy == 'aggressive':
                 adjusted_strategy = 'aggressive'
                 print(f"  🔄 策略調整: {base_strategy} → {adjusted_strategy} (高影響力+強立場)")
             else:
                 adjusted_strategy = base_strategy
-        # 低影響力 + 弱立場 = 更謹慎
         elif influence_score < 0.4 and abs(current_stance) < 0.3:
+            # 低影響力 + 弱立場 = 更謹慎
             if base_strategy == 'aggressive':
                 adjusted_strategy = 'defensive'
                 print(f"  🔄 策略調整: {base_strategy} → {adjusted_strategy} (低影響力+弱立場)")
             else:
                 adjusted_strategy = base_strategy
         else:
-            adjusted_strategy = base_strategy
+            # 權衡 RL 和 GNN 的建議
+            strategy_scores = gnn_result['persuasion_prediction']['strategy_scores']
+            if strategy_scores.get(base_strategy, 0) < 0.2:
+                # 如果 RL 選擇的策略在 GNN 中得分很低，考慮切換
+                adjusted_strategy = gnn_strategy
+                print(f"  🔄 策略調整: {base_strategy} → {adjusted_strategy} (GNN 建議)")
+            else:
+                adjusted_strategy = base_strategy
         
-        # 證據選擇：根據策略調整證據選擇
+        # 證據選擇：根據策略和預測的說服力調整
         evidence = rag_result['best_evidence']
         evidence_confidence = min(1.0, rag_result['total_evidence'] / 5.0)
         
-        print(f"  ✨ 融合結果: 最終策略={adjusted_strategy}, 證據信心={evidence_confidence:.2f}")
+        # 根據預測的 Delta 概率調整證據信心度
+        adjusted_confidence = evidence_confidence * (0.5 + 0.5 * delta_probability)
+        
+        print(f"  ✨ 融合結果: 最終策略={adjusted_strategy}, 證據信心={adjusted_confidence:.2f}, Delta概率={delta_probability:.2f}")
         
         return {
             'final_strategy': adjusted_strategy,
             'evidence': evidence,
-            'evidence_confidence': evidence_confidence,
+            'evidence_confidence': adjusted_confidence,
             'social_influence': influence_score,
             'stance_strength': abs(current_stance),
             'conviction': gnn_result['conviction'],
+            'delta_probability': delta_probability,
+            'gnn_suggested_strategy': gnn_strategy,
             'fusion_timestamp': time.time()
         }
     

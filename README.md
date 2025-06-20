@@ -10,9 +10,9 @@
 ## ✨ 核心特色
 
 - 🎯 **多智能體辯論** - 3個具有不同立場和性格的AI Agent進行動態辯論
-- 📚 **RAG檢索增強** - 基於 Chroma 向量資料庫，包含 45,974 個文檔
-- 🔗 **GNN社會網絡** - Deep Graph Infomax (DGI) 算法模擬社會影響力
-- 🎮 **RL策略學習** - 4種辯論策略動態選擇，36,277 個訓練樣本
+- 📚 **RAG檢索增強** - 基於 FAISS/Chroma 向量資料庫，支援混合檢索和重排序
+- 🔗 **GNN社會網絡** - 監督式學習預測說服成功率，多任務學習架構
+- 🎮 **RL策略學習** - PPO強化學習，真實環境互動，4種辯論策略動態選擇
 - 🌐 **Web介面** - 現代化的 Flask + Bootstrap 5 響應式界面
 - ⚡ **並行處理** - 異步架構，三大模組並行分析
 
@@ -130,24 +130,31 @@ python train_all.py --rag-chroma  # Chroma 向量索引
 ## 📊 技術細節
 
 ### RAG 系統
-- **向量資料庫**: Chroma
-- **嵌入模型**: OpenAI text-embedding-3-small
-- **文檔數量**: 45,974 個
-- **檢索策略**: 相似度檢索 + 主題過濾 + 品質評分
-- **元數據索引**: 12 個主題分類、說服成功標記、論證強度評分
+- **向量資料庫**: FAISS + Chroma
+- **嵌入模型**: BERT/Sentence-BERT
+- **檢索策略**: 混合檢索（向量 + BM25）+ 學習式重排序
+- **支援功能**: 批次處理、增量更新、上下文感知檢索
+- **優化技術**: IVF索引、GPU加速、查詢快取
 
 ### GNN 模型
-- **算法**: Deep Graph Infomax (DGI)
-- **圖規模**: 14,307 個節點，38,606 條邊
-- **嵌入維度**: 128
-- **訓練輪數**: 200 epochs
-- **損失函數**: 對比學習損失
+- **算法**: 監督式學習（GraphSAGE + GAT）
+- **任務類型**: 多任務學習
+  - Delta 預測（二分類）
+  - 品質評分（回歸）
+  - 策略分類（多分類）
+- **模型架構**: 3層 GraphSAGE + GAT 注意力機制
+- **訓練效果**: Delta 準確率 67.77%，策略準確率 64.47%
+- **整合功能**: 預測說服成功率、推薦最佳策略
 
 ### RL 模型
-- **基礎模型**: DistilBERT
-- **訓練樣本**: 36,277 個
-- **策略類型**: aggressive、defensive、analytical、empathetic
-- **評估指標**: MSE、MAE、R²
+- **算法**: PPO (Proximal Policy Optimization)
+- **網路架構**: Actor-Critic 雙網路
+- **動作空間**: 4種策略（aggressive、defensive、analytical、empathetic）
+- **獎勵設計**: 
+  - 策略效果獎勵
+  - 說服成功獎勵
+  - 策略多樣性獎勵
+- **環境設計**: 真實辯論環境模擬，包含狀態轉移和終止條件
 
 ### 辯論機制
 - **投降條件**: 
@@ -185,10 +192,20 @@ Social_Debate_AI/
 
 ## 📚 文檔導覽
 
+### 使用指南
 - [快速開始指南](docs/QUICKSTART.md) - 5分鐘上手教程
 - [訓練指南](docs/TRAINING_GUIDE.md) - 完整的模型訓練說明
+- [配置指南](docs/CONFIGURATION_GUIDE.md) - 系統配置詳細說明
+- [辯論評分系統](docs/DEBATE_SCORING_SYSTEM.md) - 勝負判定機制詳解
+
+### 技術文檔
 - [API 參考](docs/API_REFERENCE.md) - Flask API 接口文檔
 - [部署指南](docs/DEPLOYMENT.md) - 生產環境部署說明
+
+### 模組說明
+- [GNN 模組說明](docs/GNN_MODULE.md) - 圖神經網路詳細文檔
+- [RL 模組說明](docs/RL_MODULE.md) - 強化學習詳細文檔
+- [RAG 模組說明](docs/RAG_MODULE.md) - 檢索增強生成詳細文檔
 
 ## 🎮 使用示例
 
