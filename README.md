@@ -1,4 +1,274 @@
+# �� Social Debate AI
+
+*English | [中文](#chinese-version)*
+
+A deep learning-based multi-agent social debate system that integrates RAG, GNN, and RL technologies for intelligent debate simulation.
+
+![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
+![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-red.svg)
+![Flask](https://img.shields.io/badge/Flask-2.0+-lightgrey.svg)
+
+## ✨ Key Features
+
+- 🎯 **Multi-Agent Debate** - 3 AI Agents with different stances and personalities engage in dynamic debates
+- 📚 **RAG Enhancement** - Based on FAISS/Chroma vector databases, supporting hybrid retrieval and reranking
+- 🔗 **GNN Social Network** - Supervised learning to predict persuasion success rate with multi-task learning architecture
+- 🎮 **RL Strategy Learning** - PPO reinforcement learning with real environment interaction and 4 dynamic debate strategies
+- 🌐 **Web Interface** - Modern Flask + Bootstrap 5 responsive interface
+- ⚡ **Parallel Processing** - Asynchronous architecture with three modules analyzing in parallel
+
+## 🏗️ System Architecture
+
+```mermaid
+flowchart TD
+    UI[🌐 Web Interface] --> O[⚡ Orchestrator]
+    O --> DM[🎭 Dialogue Manager]
+    
+    O --> RAG[📚 RAG<br/>Retrieval Augmented]
+    O --> GNN[🔗 GNN<br/>Social Network]
+    O --> RL[🎮 RL<br/>Strategy Learning]
+    
+    DM --> A[🔴 Agent A<br/>Pro]
+    DM --> B[🟢 Agent B<br/>Con]
+    DM --> C[🟡 Agent C<br/>Neutral]
+    
+    RAG -.-> DM
+    GNN -.-> DM
+    RL -.-> DM
+    
+    style UI fill:#FFE4E1
+    style O fill:#F0E68C
+    style DM fill:#F0E68C
+    style RAG fill:#E0FFFF
+    style GNN fill:#E0FFFF
+    style RL fill:#E0FFFF
+    style A fill:#FFB6C1
+    style B fill:#90EE90
+    style C fill:#FFFFE0
+```
+
+## 🚀 Quick Start
+
+### Requirements
+- Python 3.8+
+- CUDA 11.8+ (optional, for GPU acceleration)
+- 8GB+ RAM
+- OpenAI API Key (for RAG embeddings)
+
+### Installation
+
+```bash
+# 1. Clone the project
+git clone https://github.com/your-username/Social_Debate_AI.git
+cd Social_Debate_AI
+
+# 2. Create virtual environment
+conda create -n social_debate python=3.8
+conda activate social_debate
+
+# 3. Install dependencies
+pip install -r requirements.txt
+
+# 4. Set environment variables
+cp env.example .env
+# Edit .env file, add your OPENAI_API_KEY
+
+# 5. Download pre-trained models (optional)
+# If no pre-trained models, the system will train automatically
+```
+
+### Quick Run
+
+```bash
+# Method 1: Use startup script
+# Windows
+scripts\start_flask.bat
+
+# Linux/Mac
+./scripts/start_flask.sh
+
+# Method 2: Direct run
+python run_flask.py
+```
+
+Visit http://localhost:5000 to start using!
+
+## 🎓 Training Models
+
+### Train All Models
+```bash
+python train_all.py --all
+```
+
+### Individual Training
+```bash
+# Train GNN social network model
+python train_all.py --gnn
+
+# Train RL strategy model
+python train_all.py --rl
+
+# Build RAG index
+python train_all.py --rag        # Simple index
+python train_all.py --rag-chroma  # Chroma vector index
+```
+
+For detailed training guide, see [docs/TRAINING_GUIDE.md](docs/TRAINING_GUIDE.md)
+
+## 📊 Technical Details
+
+### RAG System
+- **Vector Database**: FAISS + Chroma
+- **Embedding Model**: BERT/Sentence-BERT
+- **Retrieval Strategy**: Hybrid retrieval (Vector + BM25) + Learned reranking
+- **Features**: Batch processing, incremental updates, context-aware retrieval
+- **Optimizations**: IVF indexing, GPU acceleration, query caching
+
+### GNN Model
+- **Algorithm**: Supervised learning (GraphSAGE + GAT)
+- **Task Type**: Multi-task learning
+  - Delta prediction (binary classification)
+  - Quality scoring (regression)
+  - Strategy classification (multi-class)
+- **Architecture**: 3-layer GraphSAGE + GAT attention mechanism
+- **Performance**: Delta accuracy 67.77%, Strategy accuracy 64.47%
+- **Integration**: Predict persuasion success rate, recommend optimal strategies
+
+### RL Model
+- **Algorithm**: PPO (Proximal Policy Optimization)
+- **Network**: Actor-Critic dual networks
+- **Action Space**: 4 strategies (aggressive, defensive, analytical, empathetic)
+- **Reward Design**: 
+  - Strategy effectiveness reward
+  - Persuasion success reward
+  - Strategy diversity reward
+- **Environment**: Real debate environment simulation with state transitions and termination conditions
+
+### Debate Mechanism
+- **Surrender Conditions**: 
+  - High persuasion (>0.6) + Low belief (<0.4)
+  - Near-neutral stance (<0.2) + Lower belief (<0.5)
+  - Highly persuaded for 3 consecutive rounds (>0.5)
+- **Victory Determination**: Comprehensive consideration of stance firmness, persuasion ability, and resistance
+
+## 📁 Project Structure
+
+```
+Social_Debate_AI/
+├── ui/                    # Flask Web Application
+│   ├── app.py            # Backend API
+│   ├── templates/        # HTML Templates
+│   └── static/          # CSS/JS Resources
+├── src/                  # Core Modules
+│   ├── agents/          # Agent Implementation
+│   ├── rag/             # RAG Retrieval System
+│   ├── gnn/             # GNN Social Network
+│   ├── rl/              # RL Strategy Learning
+│   ├── orchestrator/    # Debate Orchestrator
+│   ├── dialogue/        # Dialogue Management
+│   └── gpt_interface/   # GPT Interface
+├── data/                 # Data Directory
+│   ├── raw/             # Raw Data
+│   ├── models/          # Trained Models
+│   ├── chroma/          # Vector Index
+│   └── rl/              # RL Training Data
+├── configs/              # Configuration Files
+├── scripts/              # Startup Scripts
+├── docs/                 # Detailed Documentation
+└── tests/                # Test Suite
+```
+
+## 📚 Documentation
+
+### User Guides
+- [Quick Start Guide](docs/QUICKSTART.md) - 5-minute tutorial
+- [Training Guide](docs/TRAINING_GUIDE.md) - Complete model training instructions
+- [Configuration Guide](docs/CONFIGURATION_GUIDE.md) - Detailed system configuration
+- [Debate Scoring System](docs/DEBATE_SCORING_SYSTEM.md) - Victory determination mechanism
+
+### Technical Documentation
+- [API Reference](docs/API_REFERENCE.md) - Flask API interface documentation
+- [Deployment Guide](docs/DEPLOYMENT.md) - Production deployment instructions
+
+### Module Documentation
+- [GNN Module](docs/GNN_MODULE.md) - Graph Neural Network detailed documentation
+- [RL Module](docs/RL_MODULE.md) - Reinforcement Learning detailed documentation
+- [RAG Module](docs/RAG_MODULE.md) - Retrieval Augmented Generation detailed documentation
+
+## 🎮 Usage Examples
+
+### 1. Set Debate Topic
+Enter your discussion topic in the Web UI, for example:
+- "Should artificial intelligence be regulated by government?"
+- "Is universal basic income feasible?"
+- "Is social media's impact on society positive or negative?"
+
+### 2. Observe Debate Process
+- Agent A (Red): Aggressive pro side, stance +0.8
+- Agent B (Green): Rational con side, stance -0.6
+- Agent C (Yellow): Neutral observer, stance 0.0
+
+### 3. Analyze Debate Results
+The system automatically:
+- Evaluates persuasiveness, aggressiveness, and evidence strength of each statement
+- Updates agents' stances and beliefs
+- Determines if any agent has been persuaded to surrender
+- Provides final victory determination and detailed analysis
+
+## 🔧 Configuration
+
+Main configuration files are located in the `configs/` directory:
+
+- `debate.yaml` - Debate parameter configuration
+- `rag.yaml` - RAG system configuration
+- `gnn.yaml` - GNN model configuration
+- `rl.yaml` - RL training configuration
+
+## 📊 Dataset
+
+This project uses the Reddit ChangeMyView dataset:
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3778297.svg)](https://doi.org/10.5281/zenodo.3778297)
+
+**Dataset Features**:
+- 10,303 debate topics
+- 17,716 successful persuasion cases
+- 18,561 unsuccessful persuasion cases
+- Rich metadata annotations
+
+## 🤝 Contributing
+
+We welcome code contributions, issue reports, and suggestions!
+
+1. Fork this project
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details
+
+## 🙏 Acknowledgments
+
+- Reddit ChangeMyView community for providing high-quality dataset
+- PyTorch team for the deep learning framework
+- LangChain team for RAG toolchain
+- All contributors and users for their support
+
+---
+
+⭐ If this project helps you, please give us a Star!
+
+---
+
+## Chinese Version
+
 # 🤖 Social Debate AI
+
+*[English](#social-debate-ai) | 中文*
 
 基於深度學習的多智能體社會辯論系統，整合 RAG、GNN、RL 技術實現智能辯論模擬。
 
